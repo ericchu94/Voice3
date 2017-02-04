@@ -7,7 +7,7 @@
 #include "Runtime/Engine/Classes/Sound/SoundWaveProcedural.h"
 #include "Runtime/Online/Voice/Public/Voice.h"
 
-VoicePipe::VoicePipe(float Threshold, double Delay, TSharedPtr<IVoiceCapture> VoiceCapture) : Threshold(Threshold), Delay(Delay), VoiceCapture(VoiceCapture)
+VoicePipe::VoicePipe(float Threshold, float Delay, TSharedPtr<IVoiceCapture> VoiceCapture) : Threshold(Threshold), Delay(Delay), VoiceCapture(VoiceCapture)
 {
 }
 
@@ -46,11 +46,17 @@ uint32 VoicePipe::Run()
 			SoundWave->QueueAudio(Buffer, AvailableVoiceData);
 			LastCaptureTime = FPlatformTime::Seconds();
 
-			int Samples = AvailableVoiceData / 2;
+			uint32 Samples = AvailableVoiceData / 2;
 			int16* SamplePtr = reinterpret_cast<int16*>(Buffer);
 			int64 Sum = 0;
-			for (int i = 0; i < Samples; i++) {
-				Sum += SamplePtr[i] * SamplePtr[i];
+			for (uint32 i = 0; i < Samples; i++) {
+				Sum += SamplePtr[i];
+			}
+			int64 Average = Sum / Samples;
+			Sum = 0;
+			for (uint32 i = 0; i < Samples; i++) {
+				int64 Diff = SamplePtr[i] - Average;
+				Sum += Diff * Diff;
 			}
 			float Amplitude = FMath::Sqrt(Sum / Samples);
 			//UE_LOG(LogTemp, Log, TEXT("Amplitude: %f"), Amplitude);

@@ -25,11 +25,11 @@ public:
 
 	virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
 
-	UPROPERTY(VisibleAnywhere)
+	UPROPERTY(EditAnywhere)
 		float Threshold = 400;
 
-	UPROPERTY(VisibleAnywhere)
-		double Delay = 0.15;
+	UPROPERTY(EditAnywhere)
+		float Delay = 0.15;
 
 	UFUNCTION(BlueprintCallable, Category = "Voice")
 		USoundWaveProcedural* GetSoundWave();

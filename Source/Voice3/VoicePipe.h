@@ -15,10 +15,10 @@ class VOICE3_API VoicePipe : public FRunnable
 	USoundWaveProcedural *SoundWave;
 	bool MouthOpen = false;
 	float Threshold;
-	double Delay;
+	float Delay;
 
 public:
-	VoicePipe(float Threshold, double Delay, TSharedPtr<IVoiceCapture> VoiceCapture);
+	VoicePipe(float Threshold, float Delay, TSharedPtr<IVoiceCapture> VoiceCapture);
 	~VoicePipe();
 
 	USoundWaveProcedural* GetSoundWave();
