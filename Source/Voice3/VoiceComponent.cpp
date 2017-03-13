@@ -102,9 +102,10 @@ TArray<uint8> UVoiceComponent::GetVoiceData(bool Compressed)
 		UE_LOG(LogTemp, Warning, TEXT("Buffer too small"));
 		return TArray<uint8>();
 	}
+	Buffer.Append(VoiceData.GetData(), AvailableVoiceData);
 
-	// If nothing was captured, and nothing was captured last frame
-	if (AvailableVoiceData == 0) {
+	// If nothing in Buffer, return empty array
+	if (Buffer.Num() == 0) {
 		return TArray<uint8>();
 	}
 
@@ -118,23 +119,25 @@ TArray<uint8> UVoiceComponent::GetVoiceData(bool Compressed)
 			CapturedLastTick = true;
 		}
 
-		Buffer.Append(VoiceData.GetData(), AvailableVoiceData);
 
 		// Compress data
+		int32 FragmentSize = FMath::Min<int>(FRAGMENT_SIZE, Buffer.Num());
 		TArray<uint8> CompressedData;
-		CompressedData.SetNumUninitialized(BUFFER_SIZE);
-		uint32 CompressedDataSize = BUFFER_SIZE;
-		int32 BytesSkipped = VoiceEncoder->Encode(Buffer.GetData(), Buffer.Num(), CompressedData.GetData(), CompressedDataSize);
+		CompressedData.SetNumUninitialized(FragmentSize);
+		uint32 CompressedDataSize = FragmentSize;
+		int32 BytesSkipped = VoiceEncoder->Encode(Buffer.GetData(), FragmentSize, CompressedData.GetData(), CompressedDataSize);
 		if (BytesSkipped != 0) {
 			UE_LOG(LogTemp, Warning, TEXT("Skipped %d bytes"), BytesSkipped);
 		}
-		Buffer.RemoveAt(0, Buffer.Num() - BytesSkipped);
+
+		Buffer.RemoveAt(0, FragmentSize);
 
 		CompressedData.SetNum(CompressedDataSize);
 		AudioData = CompressedData;
 	} else {
-		VoiceData.SetNum(AvailableVoiceData);
-		AudioData = VoiceData;
+		AudioData.SetNum(FMath::Min<int>(FRAGMENT_SIZE, Buffer.Num()));
+		FMemory::Memcpy(AudioData.GetData(), Buffer.GetData(), AudioData.Num());
+		Buffer.RemoveAt(0, AudioData.Num());
 	}
 	
 	return AudioData;

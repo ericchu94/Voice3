@@ -11,6 +11,7 @@ class IVoiceDecoder;
 class USoundWaveProcedural;
 
 #define BUFFER_SIZE (32 * 1024)
+#define FRAGMENT_SIZE (2 * 1024)
 
 UCLASS( ClassGroup=(Custom), meta=(BlueprintSpawnableComponent) )
 class VOICE3_API UVoiceComponent : public UActorComponent
