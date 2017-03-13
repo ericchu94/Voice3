@@ -18,6 +18,10 @@ class VOICE3_API VoicePipe : public FRunnable
 	float Delay;
 
 public:
+	int FrameNumber = 0;
+	float SStart = -1;
+	float EEnd = -1;
+
 	VoicePipe(float Threshold, float Delay, TSharedPtr<IVoiceCapture> VoiceCapture);
 	~VoicePipe();
 

@@ -5,6 +5,9 @@
 #include "VoicePipe.h"
 #include "Runtime/Online/Voice/Public/VoiceModule.h"
 #include "Runtime/Online/Voice/Public/Interfaces/VoiceCapture.h"
+#include "Runtime/Online/Voice/Public/Interfaces/VoiceCodec.h"
+#include "Runtime/Online/Voice/Public/Voice.h"
+#include "Runtime/Engine/Classes/Sound/SoundWaveProcedural.h"
 
 // Sets default values for this component's properties
 UVoiceComponent::UVoiceComponent()
@@ -24,29 +27,115 @@ void UVoiceComponent::BeginPlay()
 
 	// ...
 	// VoiceCapture must be created on game thread
-	TSharedPtr<IVoiceCapture> VoiceCapture = FVoiceModule::Get().CreateVoiceCapture();
+	VoiceCapture = FVoiceModule::Get().CreateVoiceCapture();
 	if (!VoiceCapture.IsValid()) {
 		UE_LOG(LogTemp, Error, TEXT("VoiceCapture is not valid"));
 		return;
 	}
-	Pipe = new VoicePipe(Threshold, Delay, VoiceCapture);
-	this->Thread = FRunnableThread::Create(Pipe, TEXT("VoicePipe"));
+	VoiceEncoder = FVoiceModule::Get().CreateVoiceEncoder();
+	if (!VoiceEncoder.IsValid()) {
+		UE_LOG(LogTemp, Error, TEXT("VoiceEncoder is not valid"));
+		return;
+	}
+	VoiceDecoder = FVoiceModule::Get().CreateVoiceDecoder();
+	if (!VoiceDecoder.IsValid()) {
+		UE_LOG(LogTemp, Error, TEXT("VoiceDecoder is not valid"));
+		return;
+	}
+	SoundWave = NewObject<USoundWaveProcedural>();
+	SoundWave->SampleRate = VOICE_SAMPLE_RATE;
+	SoundWave->NumChannels = NUM_VOICE_CHANNELS;
+	SoundWave->Duration = TNumericLimits<float>::Max();
+
+	VoiceCapture->Start();
 }
 
 void UVoiceComponent::EndPlay(const EEndPlayReason::Type EndPlayReason) {
 	Super::EndPlay(EndPlayReason);
 
-	this->Thread->Kill();
-	delete this->Thread;
-	this->Thread = NULL;
-	delete Pipe;
-	Pipe = NULL;
+	VoiceCapture->Stop();
+	VoiceCapture->Shutdown();
+	VoiceEncoder->Destroy();
+	VoiceDecoder->Destroy();
 }
 
-USoundWaveProcedural* UVoiceComponent::GetSoundWave() {
-	return Pipe->GetSoundWave();
+void UVoiceComponent::AddVoiceData(bool Compressed, TArray<uint8> VoiceData) {
+	if (VoiceData.Num() == 0)
+		return;
+
+	TArray<uint8> AudioData;
+	if (Compressed) {
+		AudioData.SetNumUninitialized(BUFFER_SIZE);
+		uint32 AudioDataSize = BUFFER_SIZE;
+		VoiceDecoder->Decode(VoiceData.GetData(), VoiceData.Num(), AudioData.GetData(), AudioDataSize);
+		AudioData.SetNum(AudioDataSize);
+	}
+	else
+	{
+		AudioData = VoiceData;
+	}
+	SoundWave->QueueAudio(AudioData.GetData(), AudioData.Num());
 }
 
-bool UVoiceComponent::IsMouthOpen() {
-	return Pipe->IsMouthOpen();
+
+TArray<uint8> UVoiceComponent::GetVoiceData(bool Compressed)
+{
+	// Check valid states
+	if (!VoiceCapture.IsValid()) {
+		UE_LOG(LogTemp, Error, TEXT("VoiceCapture is not valid"));
+		return TArray<uint8>();
+	}
+	if (!VoiceEncoder.IsValid()) {
+		UE_LOG(LogTemp, Error, TEXT("VoiceEncoder is not valid"));
+		return TArray<uint8>();
+	}
+	if (!VoiceDecoder.IsValid()) {
+		UE_LOG(LogTemp, Error, TEXT("VoiceDecoder is not valid"));
+		return TArray<uint8>();
+	}
+
+	// Read from mic
+	TArray<uint8> VoiceData;
+	VoiceData.SetNumUninitialized(BUFFER_SIZE);
+	uint32 AvailableVoiceData;
+	if (VoiceCapture->GetVoiceData(VoiceData.GetData(), BUFFER_SIZE, AvailableVoiceData) == EVoiceCaptureState::BufferTooSmall) {
+		UE_LOG(LogTemp, Warning, TEXT("Buffer too small"));
+		return TArray<uint8>();
+	}
+
+	// If nothing was captured, and nothing was captured last frame
+	if (AvailableVoiceData == 0) {
+		return TArray<uint8>();
+	}
+
+	TArray<uint8> AudioData;
+	if (Compressed) {
+		if (AvailableVoiceData == 0) {
+			CapturedLastTick = false;
+			Buffer.AddZeroed(1024);
+		}
+		else {
+			CapturedLastTick = true;
+		}
+
+		Buffer.Append(VoiceData.GetData(), AvailableVoiceData);
+
+		// Compress data
+		TArray<uint8> CompressedData;
+		CompressedData.SetNumUninitialized(BUFFER_SIZE);
+		uint32 CompressedDataSize = BUFFER_SIZE;
+		int32 BytesSkipped = VoiceEncoder->Encode(Buffer.GetData(), Buffer.Num(), CompressedData.GetData(), CompressedDataSize);
+		if (BytesSkipped != 0) {
+			UE_LOG(LogTemp, Warning, TEXT("Skipped %d bytes"), BytesSkipped);
+		}
+		Buffer.RemoveAt(0, Buffer.Num() - BytesSkipped);
+
+		CompressedData.SetNum(CompressedDataSize);
+		AudioData = CompressedData;
+	} else {
+		VoiceData.SetNum(AvailableVoiceData);
+		AudioData = VoiceData;
+	}
+	
+	return AudioData;
 }

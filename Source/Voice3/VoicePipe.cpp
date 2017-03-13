@@ -37,12 +37,16 @@ uint32 VoicePipe::Run()
 	uint8 *Buffer = new uint8[BufferSize];
 	double LastCaptureTime = 0;
 	while (!ShouldStop) {
+		double sStart = FPlatformTime::Seconds();
 		uint32 AvailableVoiceData;
 		if (VoiceCapture->GetVoiceData(Buffer, BufferSize, AvailableVoiceData) == EVoiceCaptureState::BufferTooSmall) {
 			UE_LOG(LogTemp, Warning, TEXT("Buffer too small"));
 		}
 
 		if (AvailableVoiceData > 0) {
+			SStart = sStart;
+			EEnd = FPlatformTime::Seconds();
+			++FrameNumber;
 			SoundWave->QueueAudio(Buffer, AvailableVoiceData);
 			LastCaptureTime = FPlatformTime::Seconds();
 

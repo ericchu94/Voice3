@@ -5,18 +5,28 @@
 #include "Components/ActorComponent.h"
 #include "VoiceComponent.generated.h"
 
-class VoicePipe;
+class IVoiceCapture;
+class IVoiceEncoder;
+class IVoiceDecoder;
 class USoundWaveProcedural;
+
+#define BUFFER_SIZE (32 * 1024)
 
 UCLASS( ClassGroup=(Custom), meta=(BlueprintSpawnableComponent) )
 class VOICE3_API UVoiceComponent : public UActorComponent
 {
 	GENERATED_BODY()
 
-	VoicePipe *Pipe;
-	FRunnableThread* Thread;
+	TSharedPtr<IVoiceCapture> VoiceCapture;
+	TSharedPtr<IVoiceEncoder> VoiceEncoder;
+	TSharedPtr<IVoiceDecoder> VoiceDecoder;
+	TArray<uint8> Buffer;
+	bool CapturedLastTick = false;
 
 public:	
+	UPROPERTY(BlueprintReadOnly)
+	USoundWaveProcedural* SoundWave;
+
 	// Sets default values for this component's properties
 	UVoiceComponent();
 
@@ -32,9 +42,8 @@ public:
 		float Delay = 0.15;
 
 	UFUNCTION(BlueprintCallable, Category = "Voice")
-		USoundWaveProcedural* GetSoundWave();
+		TArray<uint8> GetVoiceData(bool Compressed);
 
 	UFUNCTION(BlueprintCallable, Category = "Voice")
-		bool IsMouthOpen();
-	
+		void AddVoiceData(bool Compressed, TArray<uint8> Data);
 };
