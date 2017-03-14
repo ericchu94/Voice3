@@ -9,6 +9,7 @@ class IVoiceCapture;
 class IVoiceEncoder;
 class IVoiceDecoder;
 class USoundWaveProcedural;
+class FSocket;
 
 #define BUFFER_SIZE (32 * 1024)
 #define FRAGMENT_SIZE (2 * 1024)
@@ -24,15 +25,30 @@ class VOICE3_API UVoiceComponent : public UActorComponent
 	TArray<uint8> Buffer;
 	bool CapturedLastTick = false;
 
-public:	
+	FSocket* Listener;
+	FSocket* Socket;
+
+
+	uint8 VoiceBuffer[BUFFER_SIZE];
+
+public:
 	UPROPERTY(BlueprintReadOnly)
-	USoundWaveProcedural* SoundWave;
+		USoundWaveProcedural* SoundWave;
+
+	UPROPERTY(EditAnywhere)
+		bool Compress;
+
+	UPROPERTY(BlueprintReadWrite)
+		bool LocallyControlled = false;
 
 	// Sets default values for this component's properties
 	UVoiceComponent();
 
 	// Called when the game starts
 	virtual void BeginPlay() override;
+
+	// Called every frame
+	virtual void TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction) override;
 
 	virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
 
@@ -42,9 +58,9 @@ public:
 	UPROPERTY(EditAnywhere)
 		float Delay = 0.15;
 
-	UFUNCTION(BlueprintCallable, Category = "Voice")
-		TArray<uint8> GetVoiceData(bool Compressed);
+	UFUNCTION(BlueprintCallable, Category = "Socket")
+		void Listen(int32& Addr, int32& Port);
 
-	UFUNCTION(BlueprintCallable, Category = "Voice")
-		void AddVoiceData(bool Compressed, TArray<uint8> Data);
+	UFUNCTION(BlueprintCallable, Category = "Socket")
+		void Connect(int32 Addr, int32 Port);
 };
