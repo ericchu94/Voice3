@@ -221,6 +221,7 @@ void UVoiceComponent::Listen(int32& Addr, int32& Port) {
 	Listener->Listen(4);
 	Listener->GetAddress(*LocalAddress); // Populate port field
 	UE_LOG(LogTemp, Log, TEXT("Listening on %s"), *LocalAddress->ToString(true));
+	GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, FString::Printf(TEXT("Listening on %s"), *LocalAddress->ToString(true)));
 
 
 	LocalAddress->GetIp((uint32&)Addr);
@@ -237,9 +238,11 @@ void UVoiceComponent::Connect(int32 Addr, int32 Port) {
 	FSocket* Sock = SocketSubsystem->CreateSocket(NAME_Stream, "VoiceComponent Client");
 	if (!Sock->Connect(*RemoteAddress)) {
 		UE_LOG(LogTemp, Error, TEXT("Failed to connect to %s"), *RemoteAddress->ToString(true));
+		GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, FString::Printf(TEXT("Failed to connect to %s"), *RemoteAddress->ToString(true)));
 		return;
 	}
 
 	Socket = Sock;
 	UE_LOG(LogTemp, Log, TEXT("Connected to %s"), *RemoteAddress->ToString(true));
+	GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, FString::Printf(TEXT("Connected to %s"), *RemoteAddress->ToString(true)));
 }
