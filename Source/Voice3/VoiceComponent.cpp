@@ -168,6 +168,7 @@ void UVoiceComponent::TickComponent(float DeltaTime, ELevelTick TickType, FActor
 				TSharedRef<FInternetAddr> RemoteAddress = SocketSubsystem->CreateInternetAddr();
 				Socket->GetPeerAddress(*RemoteAddress);
 				UE_LOG(LogTemp, Log, TEXT("Sent %d bytes to %s"), BytesSent, *RemoteAddress->ToString(true));
+				GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, FString::Printf(TEXT("Sent %d bytes to %s"), BytesSent, *RemoteAddress->ToString(true)));
 				SentLastTick = true;
 			}
 			else {
