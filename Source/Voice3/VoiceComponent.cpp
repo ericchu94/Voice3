@@ -131,12 +131,36 @@ void UVoiceComponent::TickComponent(float DeltaTime, ELevelTick TickType, FActor
 			if (VoiceCapture->GetVoiceData(VoiceBuffer, BUFFER_SIZE, AvailableVoiceData) == EVoiceCaptureState::BufferTooSmall) {
 				UE_LOG(LogTemp, Warning, TEXT("Buffer too small"));
 			}
-			if (AvailableVoiceData > 0) {
+			uint8 *Data;
+			int32 Count = 0;
+			if (Compress) {
+				if (AvailableVoiceData > 0) {
+					Buffer.Append(VoiceBuffer, AvailableVoiceData);
+				}
+				else if(SentLastTick) {
+					Buffer.AddZeroed(1000);
+				}
+
+				uint32 CompressedDataSize = BUFFER_SIZE;
+				int32 BytesLeft = VoiceEncoder->Encode(Buffer.GetData(), Buffer.Num(), CompressedBuffer, CompressedDataSize);
+				Buffer.RemoveAt(0, Buffer.Num() - BytesLeft);
+				Data = CompressedBuffer;
+				Count = CompressedDataSize;
+			}
+			else {
+				Data = VoiceBuffer;
+				Count = AvailableVoiceData;
+			}
+			if (Count > 0) {
 				int32 BytesSent;
-				Socket->Send(VoiceBuffer, AvailableVoiceData, BytesSent);
+				Socket->Send(Data, Count, BytesSent);
 				TSharedRef<FInternetAddr> RemoteAddress = SocketSubsystem->CreateInternetAddr();
 				Socket->GetPeerAddress(*RemoteAddress);
 				UE_LOG(LogTemp, Log, TEXT("Sent %d bytes to %s"), BytesSent, *RemoteAddress->ToString(true));
+				SentLastTick = true;
+			}
+			else {
+				SentLastTick = false;
 			}
 		}
 	}

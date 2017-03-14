@@ -23,13 +23,14 @@ class VOICE3_API UVoiceComponent : public UActorComponent
 	TSharedPtr<IVoiceEncoder> VoiceEncoder;
 	TSharedPtr<IVoiceDecoder> VoiceDecoder;
 	TArray<uint8> Buffer;
-	bool CapturedLastTick = false;
+	bool SentLastTick = false;
 
 	FSocket* Listener;
 	FSocket* Socket;
 
 
 	uint8 VoiceBuffer[BUFFER_SIZE];
+	uint8 CompressedBuffer[BUFFER_SIZE];
 
 public:
 	UPROPERTY(BlueprintReadOnly)
