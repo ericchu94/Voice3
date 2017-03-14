@@ -36,6 +36,9 @@ public:
 	UPROPERTY(BlueprintReadOnly)
 		USoundWaveProcedural* SoundWave;
 
+	UPROPERTY(BlueprintReadOnly)
+		bool Peak;
+
 	UPROPERTY(EditAnywhere)
 		bool Compress;
 
@@ -54,7 +57,7 @@ public:
 	virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
 
 	UPROPERTY(EditAnywhere)
-		float Threshold = 400;
+		float Threshold = 160000;
 
 	UPROPERTY(EditAnywhere)
 		float Delay = 0.15;

@@ -105,7 +105,6 @@ void UVoiceComponent::TickComponent(float DeltaTime, ELevelTick TickType, FActor
 	if (Socket) {
 		TSharedRef<FInternetAddr> LocalAddress = SocketSubsystem->CreateInternetAddr();
 		Socket->GetAddress(*LocalAddress);
-		UE_LOG(LogTemp, Log, TEXT("%s: %d"), *LocalAddress->ToString(true), LocallyControlled ? 1 : 0);
 
 		if (!LocallyControlled) {
 			uint32 PendingDataSize;
@@ -113,17 +112,29 @@ void UVoiceComponent::TickComponent(float DeltaTime, ELevelTick TickType, FActor
 				uint8* Data = new uint8[PendingDataSize];
 				int32 BytesRead;
 				Socket->Recv(Data, PendingDataSize, BytesRead, ESocketReceiveFlags::Type::None);
-				UE_LOG(LogTemp, Log, TEXT("Received %d bytes"), BytesRead);
+				UE_LOG(LogTemp, Log, TEXT("%s Received %d bytes"), *LocalAddress->ToString(true), BytesRead);
+				GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, FString::Printf(TEXT("%s Received %d bytes"), *LocalAddress->ToString(true), BytesRead));
 
-				// TODO append to waveform
 				SoundWave->QueueAudio(Data, BytesRead);
 
+				// Peak detection
+				uint32 SamplesCount = BytesRead / 2;
+				int16* Samples = reinterpret_cast<int16*>(Data);
+				int64 Sum = 0;
+				for (uint32 i = 0; i < SamplesCount; i++) {
+					Sum += Samples[i];
+				}
+				int64 Average = Sum / SamplesCount;
+				UE_LOG(LogTemp, Log, TEXT("Average: %d"), Average);
+				int64 SquaredSum = 0;
+				for (uint32 i = 0; i < SamplesCount; i++) {
+					int64 Diff = Samples[i] - Average;
+					SquaredSum += Diff * Diff;
+				}
+				int64 SquaredAverage = SquaredSum / SamplesCount;
+				Peak = SquaredAverage > Threshold;
+
 				delete Data;
-			}
-			else {
-				TSharedRef<FInternetAddr> LocalAddress = SocketSubsystem->CreateInternetAddr();
-				Socket->GetAddress(*LocalAddress);
-				//UE_LOG(LogTemp, Log, TEXT("No data: %s"), *LocalAddress->ToString(true));
 			}
 		}
 		else {
@@ -165,73 +176,6 @@ void UVoiceComponent::TickComponent(float DeltaTime, ELevelTick TickType, FActor
 		}
 	}
 }
-
-/*
-TArray<uint8> UVoiceComponent::GetVoiceData(bool Compressed)
-{
-	// Check valid states
-	if (!VoiceCapture.IsValid()) {
-		UE_LOG(LogTemp, Error, TEXT("VoiceCapture is not valid"));
-		return TArray<uint8>();
-	}
-	if (!VoiceEncoder.IsValid()) {
-		UE_LOG(LogTemp, Error, TEXT("VoiceEncoder is not valid"));
-		return TArray<uint8>();
-	}
-	if (!VoiceDecoder.IsValid()) {
-		UE_LOG(LogTemp, Error, TEXT("VoiceDecoder is not valid"));
-		return TArray<uint8>();
-	}
-
-	// Read from mic
-	TArray<uint8> VoiceData;
-	VoiceData.SetNumUninitialized(BUFFER_SIZE);
-	uint32 AvailableVoiceData;
-	if (VoiceCapture->GetVoiceData(VoiceData.GetData(), BUFFER_SIZE, AvailableVoiceData) == EVoiceCaptureState::BufferTooSmall) {
-		UE_LOG(LogTemp, Warning, TEXT("Buffer too small"));
-		return TArray<uint8>();
-	}
-	Buffer.Append(VoiceData.GetData(), AvailableVoiceData);
-
-	// If nothing in Buffer, return empty array
-	if (Buffer.Num() == 0) {
-		return TArray<uint8>();
-	}
-
-	TArray<uint8> AudioData;
-	if (Compressed) {
-		if (AvailableVoiceData == 0) {
-			CapturedLastTick = false;
-			Buffer.AddZeroed(1024);
-		}
-		else {
-			CapturedLastTick = true;
-		}
-
-
-		// Compress data
-		int32 FragmentSize = FMath::Min<int>(FRAGMENT_SIZE, Buffer.Num());
-		TArray<uint8> CompressedData;
-		CompressedData.SetNumUninitialized(FragmentSize);
-		uint32 CompressedDataSize = FragmentSize;
-		int32 BytesSkipped = VoiceEncoder->Encode(Buffer.GetData(), FragmentSize, CompressedData.GetData(), CompressedDataSize);
-		if (BytesSkipped != 0) {
-			UE_LOG(LogTemp, Warning, TEXT("Skipped %d bytes"), BytesSkipped);
-		}
-
-		Buffer.RemoveAt(0, FragmentSize);
-
-		CompressedData.SetNum(CompressedDataSize);
-		AudioData = CompressedData;
-	} else {
-		AudioData.SetNum(FMath::Min<int>(FRAGMENT_SIZE, Buffer.Num()));
-		FMemory::Memcpy(AudioData.GetData(), Buffer.GetData(), AudioData.Num());
-		Buffer.RemoveAt(0, AudioData.Num());
-	}
-	
-	return AudioData;
-}
-*/
 
 void UVoiceComponent::Listen(int32& Addr, int32& Port) {
 	// TODO: Assert called once
