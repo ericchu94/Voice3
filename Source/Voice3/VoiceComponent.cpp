@@ -152,8 +152,6 @@ void UVoiceComponent::TickComponent(float DeltaTime, ELevelTick TickType, FActor
 				}
 				int64 SquaredAverage = SquaredSum / SamplesCount;
 				Peak = SquaredAverage > Threshold;
-
-				delete Data;
 			}
 		}
 		else {
