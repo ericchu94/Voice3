@@ -153,9 +153,11 @@ void UVoiceComponent::TickComponent(float DeltaTime, ELevelTick TickType, FActor
 			if (Compress) {
 				if (AvailableVoiceData > 0) {
 					Buffer.Append(VoiceBuffer, AvailableVoiceData);
+					SentLastTick = true;
 				}
 				else if (SentLastTick) {
 					Buffer.AddZeroed(1000);
+					SentLastTick = false;
 				}
 
 				uint32 CompressedDataSize = BUFFER_SIZE;
@@ -175,10 +177,6 @@ void UVoiceComponent::TickComponent(float DeltaTime, ELevelTick TickType, FActor
 				Socket->GetPeerAddress(*RemoteAddress);
 				UE_LOG(LogTemp, Log, TEXT("Sent %d bytes to %s"), BytesSent, *RemoteAddress->ToString(true));
 				GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, FString::Printf(TEXT("Sent %d bytes to %s"), BytesSent, *RemoteAddress->ToString(true)));
-				SentLastTick = true;
-			}
-			else {
-				SentLastTick = false;
 			}
 		}
 	}
