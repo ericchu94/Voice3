@@ -115,11 +115,24 @@ void UVoiceComponent::TickComponent(float DeltaTime, ELevelTick TickType, FActor
 		if (!LocallyControlled) {
 			uint32 PendingDataSize;
 			if (Socket->HasPendingData(PendingDataSize)) {
-				uint8* Data = new uint8[PendingDataSize];
-				int32 BytesRead;
-				Socket->Recv(Data, PendingDataSize, BytesRead, ESocketReceiveFlags::Type::None);
-				UE_LOG(LogTemp, Log, TEXT("%s Received %d bytes"), *LocalAddress->ToString(true), BytesRead);
+				int32 CompressedDataSize;
+				Socket->Recv(CompressedBuffer, PendingDataSize, CompressedDataSize, ESocketReceiveFlags::Type::None);
+				UE_LOG(LogTemp, Log, TEXT("%s Received %d bytes"), *LocalAddress->ToString(true), CompressedDataSize);
 				//GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, FString::Printf(TEXT("%s Received %d bytes"), *LocalAddress->ToString(true), BytesRead));
+
+				uint8* Data;
+				int32 BytesRead;
+
+				if (Compress) {
+					uint32 AvailableVoiceData = BUFFER_SIZE;
+					VoiceDecoder->Decode(CompressedBuffer, CompressedDataSize, VoiceBuffer, AvailableVoiceData);
+					Data = VoiceBuffer;
+					BytesRead = AvailableVoiceData;
+				}
+				else {
+					Data = CompressedBuffer;
+					BytesRead = CompressedDataSize;
+				}
 
 				SoundWave->QueueAudio(Data, BytesRead);
 
