@@ -153,18 +153,32 @@ void UVoiceComponent::TickComponent(float DeltaTime, ELevelTick TickType, FActor
 			if (Compress) {
 				if (AvailableVoiceData > 0) {
 					Buffer.Append(VoiceBuffer, AvailableVoiceData);
-					SentLastTick = true;
 				}
-				else if (SentLastTick) {
+				else if (Flush) {
 					Buffer.AddZeroed(1000);
-					SentLastTick = false;
 				}
 
-				uint32 CompressedDataSize = BUFFER_SIZE;
-				int32 BytesLeft = VoiceEncoder->Encode(Buffer.GetData(), Buffer.Num(), CompressedBuffer, CompressedDataSize);
-				Buffer.RemoveAt(0, Buffer.Num() - BytesLeft);
-				Data = CompressedBuffer;
-				Count = CompressedDataSize;
+				if (Buffer.Num() > 0) {
+					uint32 CompressedDataSize = BUFFER_SIZE;
+					int32 BytesLeft = VoiceEncoder->Encode(Buffer.GetData(), Buffer.Num(), CompressedBuffer, CompressedDataSize);
+					Buffer.RemoveAt(0, Buffer.Num() - BytesLeft);
+					if (BytesLeft == 0) {
+						Flush = false;
+					}
+					else if (Flush) {
+						Flush = false;
+						Buffer.SetNumUninitialized(0);
+					}
+					else {
+						Flush = true;
+					}
+					Data = CompressedBuffer;
+					Count = CompressedDataSize;
+				}
+				else {
+					Data = NULL;
+					Count = 0;
+				}
 			}
 			else {
 				Data = VoiceBuffer;

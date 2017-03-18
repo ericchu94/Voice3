@@ -23,7 +23,7 @@ class VOICE3_API UVoiceComponent : public UActorComponent
 	TSharedPtr<IVoiceEncoder> VoiceEncoder;
 	TSharedPtr<IVoiceDecoder> VoiceDecoder;
 	TArray<uint8> Buffer;
-	bool SentLastTick = false;
+	bool Flush = false;
 
 	FSocket* Listener;
 	FSocket* Socket;
