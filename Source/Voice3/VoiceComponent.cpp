@@ -34,16 +34,6 @@ void UVoiceComponent::BeginPlay()
 		UE_LOG(LogTemp, Error, TEXT("VoiceCapture is not valid"));
 		return;
 	}
-	VoiceEncoder = FVoiceModule::Get().CreateVoiceEncoder();
-	if (!VoiceEncoder.IsValid()) {
-		UE_LOG(LogTemp, Error, TEXT("VoiceEncoder is not valid"));
-		return;
-	}
-	VoiceDecoder = FVoiceModule::Get().CreateVoiceDecoder();
-	if (!VoiceDecoder.IsValid()) {
-		UE_LOG(LogTemp, Error, TEXT("VoiceDecoder is not valid"));
-		return;
-	}
 	SoundWave = NewObject<USoundWaveProcedural>();
 	SoundWave->SampleRate = VOICE_SAMPLE_RATE;
 	SoundWave->NumChannels = NUM_VOICE_CHANNELS;
@@ -58,12 +48,6 @@ void UVoiceComponent::EndPlay(const EEndPlayReason::Type EndPlayReason) {
 	if (VoiceCapture.IsValid()) {
 		VoiceCapture->Stop();
 		VoiceCapture->Shutdown();
-	}
-	if (VoiceEncoder.IsValid()) {
-		VoiceEncoder->Destroy();
-	}
-	if (VoiceDecoder.IsValid()) {
-		VoiceDecoder->Destroy();
 	}
 }
 
@@ -148,45 +132,9 @@ void UVoiceComponent::TickComponent(float DeltaTime, ELevelTick TickType, FActor
 			if (VoiceCapture->GetVoiceData(VoiceBuffer, BUFFER_SIZE, AvailableVoiceData) == EVoiceCaptureState::BufferTooSmall) {
 				UE_LOG(LogTemp, Warning, TEXT("Buffer too small"));
 			}
-			uint8 *Data;
-			int32 Count = 0;
-			if (Compress) {
-				if (AvailableVoiceData > 0) {
-					Buffer.Append(VoiceBuffer, AvailableVoiceData);
-				}
-				else if (Flush) {
-					Buffer.AddZeroed(1000);
-				}
-
-				if (Buffer.Num() > 0) {
-					uint32 CompressedDataSize = BUFFER_SIZE;
-					int32 BytesLeft = VoiceEncoder->Encode(Buffer.GetData(), Buffer.Num(), CompressedBuffer, CompressedDataSize);
-					Buffer.RemoveAt(0, Buffer.Num() - BytesLeft);
-					if (BytesLeft == 0) {
-						Flush = false;
-					}
-					else if (Flush) {
-						Flush = false;
-						Buffer.SetNumUninitialized(0);
-					}
-					else {
-						Flush = true;
-					}
-					Data = CompressedBuffer;
-					Count = CompressedDataSize;
-				}
-				else {
-					Data = NULL;
-					Count = 0;
-				}
-			}
-			else {
-				Data = VoiceBuffer;
-				Count = AvailableVoiceData;
-			}
-			if (Count > 0) {
+			if (AvailableVoiceData > 0) {
 				int32 BytesSent;
-				Socket->Send(Data, Count, BytesSent);
+				Socket->Send(VoiceBuffer, AvailableVoiceData, BytesSent);
 				TSharedRef<FInternetAddr> RemoteAddress = SocketSubsystem->CreateInternetAddr();
 				Socket->GetPeerAddress(*RemoteAddress);
 				UE_LOG(LogTemp, Log, TEXT("Sent %d bytes to %s"), BytesSent, *RemoteAddress->ToString(true));

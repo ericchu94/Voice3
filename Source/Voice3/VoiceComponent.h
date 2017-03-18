@@ -6,13 +6,10 @@
 #include "VoiceComponent.generated.h"
 
 class IVoiceCapture;
-class IVoiceEncoder;
-class IVoiceDecoder;
 class USoundWaveProcedural;
 class FSocket;
 
 #define BUFFER_SIZE (32 * 1024)
-#define FRAGMENT_SIZE (2 * 1024)
 
 UCLASS( ClassGroup=(Custom), meta=(BlueprintSpawnableComponent) )
 class VOICE3_API UVoiceComponent : public UActorComponent
@@ -20,8 +17,6 @@ class VOICE3_API UVoiceComponent : public UActorComponent
 	GENERATED_BODY()
 
 	TSharedPtr<IVoiceCapture> VoiceCapture;
-	TSharedPtr<IVoiceEncoder> VoiceEncoder;
-	TSharedPtr<IVoiceDecoder> VoiceDecoder;
 	TArray<uint8> Buffer;
 	bool Flush = false;
 
@@ -30,7 +25,6 @@ class VOICE3_API UVoiceComponent : public UActorComponent
 
 
 	uint8 VoiceBuffer[BUFFER_SIZE];
-	uint8 CompressedBuffer[BUFFER_SIZE];
 
 public:
 	UPROPERTY(BlueprintReadOnly)
@@ -38,9 +32,6 @@ public:
 
 	UPROPERTY(BlueprintReadOnly)
 		bool Peak;
-
-	UPROPERTY(BlueprintReadWrite, EditAnywhere)
-		bool Compress;
 
 	UPROPERTY(BlueprintReadWrite)
 		bool LocallyControlled = false;
