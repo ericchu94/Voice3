@@ -39,7 +39,7 @@ public:
 	UPROPERTY(BlueprintReadOnly)
 		bool Peak;
 
-	UPROPERTY(EditAnywhere)
+	UPROPERTY(BlueprintReadWrite, EditAnywhere)
 		bool Compress;
 
 	UPROPERTY(BlueprintReadWrite)
