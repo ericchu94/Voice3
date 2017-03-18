@@ -55,10 +55,16 @@ void UVoiceComponent::BeginPlay()
 void UVoiceComponent::EndPlay(const EEndPlayReason::Type EndPlayReason) {
 	Super::EndPlay(EndPlayReason);
 
-	VoiceCapture->Stop();
-	VoiceCapture->Shutdown();
-	VoiceEncoder->Destroy();
-	VoiceDecoder->Destroy();
+	if (VoiceCapture.IsValid()) {
+		VoiceCapture->Stop();
+		VoiceCapture->Shutdown();
+	}
+	if (VoiceEncoder.IsValid()) {
+		VoiceEncoder->Destroy();
+	}
+	if (VoiceDecoder.IsValid()) {
+		VoiceDecoder->Destroy();
+	}
 }
 
 /*
@@ -113,7 +119,7 @@ void UVoiceComponent::TickComponent(float DeltaTime, ELevelTick TickType, FActor
 				int32 BytesRead;
 				Socket->Recv(Data, PendingDataSize, BytesRead, ESocketReceiveFlags::Type::None);
 				UE_LOG(LogTemp, Log, TEXT("%s Received %d bytes"), *LocalAddress->ToString(true), BytesRead);
-				GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, FString::Printf(TEXT("%s Received %d bytes"), *LocalAddress->ToString(true), BytesRead));
+				//GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, FString::Printf(TEXT("%s Received %d bytes"), *LocalAddress->ToString(true), BytesRead));
 
 				SoundWave->QueueAudio(Data, BytesRead);
 
@@ -148,7 +154,7 @@ void UVoiceComponent::TickComponent(float DeltaTime, ELevelTick TickType, FActor
 				if (AvailableVoiceData > 0) {
 					Buffer.Append(VoiceBuffer, AvailableVoiceData);
 				}
-				else if(SentLastTick) {
+				else if (SentLastTick) {
 					Buffer.AddZeroed(1000);
 				}
 
