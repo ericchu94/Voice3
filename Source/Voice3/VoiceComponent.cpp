@@ -99,17 +99,16 @@ void UVoiceComponent::TickComponent(float DeltaTime, ELevelTick TickType, FActor
 		if (!LocallyControlled) {
 			uint32 PendingDataSize;
 			if (Socket->HasPendingData(PendingDataSize)) {
-				uint8* Data = new uint8[PendingDataSize];
 				int32 BytesRead;
-				Socket->Recv(Data, PendingDataSize, BytesRead, ESocketReceiveFlags::Type::None);
+				Socket->Recv(VoiceBuffer, PendingDataSize, BytesRead, ESocketReceiveFlags::Type::None);
 				UE_LOG(LogTemp, Log, TEXT("%s Received %d bytes"), *LocalAddress->ToString(true), BytesRead);
 				//GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, FString::Printf(TEXT("%s Received %d bytes"), *LocalAddress->ToString(true), BytesRead));
 
-				SoundWave->QueueAudio(Data, BytesRead);
+				SoundWave->QueueAudio(VoiceBuffer, BytesRead);
 
 				// Peak detection
 				uint32 SamplesCount = BytesRead / 2;
-				int16* Samples = reinterpret_cast<int16*>(Data);
+				int16* Samples = reinterpret_cast<int16*>(VoiceBuffer);
 				int64 Sum = 0;
 				for (uint32 i = 0; i < SamplesCount; i++) {
 					Sum += Samples[i];
@@ -123,8 +122,11 @@ void UVoiceComponent::TickComponent(float DeltaTime, ELevelTick TickType, FActor
 				}
 				int64 SquaredAverage = SquaredSum / SamplesCount;
 				Peak = SquaredAverage > Threshold;
-
-				delete Data;
+				UE_LOG(LogTemp, Log, TEXT("SquaredAverage: %d"), SquaredAverage);
+				LastReceive = FPlatformTime::Seconds();
+			}
+			else if (FPlatformTime::Seconds() - LastReceive > Delay) {
+				Peak = false;
 			}
 		}
 		else {
@@ -138,7 +140,7 @@ void UVoiceComponent::TickComponent(float DeltaTime, ELevelTick TickType, FActor
 				TSharedRef<FInternetAddr> RemoteAddress = SocketSubsystem->CreateInternetAddr();
 				Socket->GetPeerAddress(*RemoteAddress);
 				UE_LOG(LogTemp, Log, TEXT("Sent %d bytes to %s"), BytesSent, *RemoteAddress->ToString(true));
-				GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, FString::Printf(TEXT("Sent %d bytes to %s"), BytesSent, *RemoteAddress->ToString(true)));
+				//GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, FString::Printf(TEXT("Sent %d bytes to %s"), BytesSent, *RemoteAddress->ToString(true)));
 			}
 		}
 	}
@@ -156,7 +158,7 @@ void UVoiceComponent::Listen(int32& Addr, int32& Port) {
 	Listener->Listen(4);
 	Listener->GetAddress(*LocalAddress); // Populate port field
 	UE_LOG(LogTemp, Log, TEXT("Listening on %s"), *LocalAddress->ToString(true));
-	GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, FString::Printf(TEXT("Listening on %s"), *LocalAddress->ToString(true)));
+	//GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, FString::Printf(TEXT("Listening on %s"), *LocalAddress->ToString(true)));
 
 
 	LocalAddress->GetIp((uint32&)Addr);
@@ -173,11 +175,11 @@ void UVoiceComponent::Connect(int32 Addr, int32 Port) {
 	FSocket* Sock = SocketSubsystem->CreateSocket(NAME_Stream, "VoiceComponent Client");
 	if (!Sock->Connect(*RemoteAddress)) {
 		UE_LOG(LogTemp, Error, TEXT("Failed to connect to %s"), *RemoteAddress->ToString(true));
-		GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, FString::Printf(TEXT("Failed to connect to %s"), *RemoteAddress->ToString(true)));
+		//GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, FString::Printf(TEXT("Failed to connect to %s"), *RemoteAddress->ToString(true)));
 		return;
 	}
 
 	Socket = Sock;
 	UE_LOG(LogTemp, Log, TEXT("Connected to %s"), *RemoteAddress->ToString(true));
-	GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, FString::Printf(TEXT("Connected to %s"), *RemoteAddress->ToString(true)));
+	//GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, FString::Printf(TEXT("Connected to %s"), *RemoteAddress->ToString(true)));
 }

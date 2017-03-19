@@ -25,6 +25,7 @@ class VOICE3_API UVoiceComponent : public UActorComponent
 
 
 	uint8 VoiceBuffer[BUFFER_SIZE];
+	double LastReceive = 0;
 
 public:
 	UPROPERTY(BlueprintReadOnly)
